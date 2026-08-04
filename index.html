@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>红利指数每日监控 · H00922 / H20955</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--line:#e5e8ef;--txt:#1f2430;--sub:#6b7280;--red:#d43030;--green:#0a8f4d}
+*{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px}
+.wrap{max-width:980px;margin:0 auto}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--sub);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:center;vertical-align:middle}
+th{background:#f0f3fa;font-weight:600}td.metric{text-align:left;font-weight:600;background:#fafbfe;white-space:nowrap;width:190px}
+.up{color:var(--red)}.down{color:var(--green)}.small{font-size:12px;color:var(--sub);margin-top:2px}
+button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer}button:disabled{opacity:.5}
+#status{font-size:12px;color:var(--sub);margin-top:8px}
+.note{font-size:12px;color:var(--sub);line-height:1.8}
+</style></head><body><div class="wrap">
+<h1>红利指数每日监控</h1>
+<div class="sub">中证红利全收益（H00922）· 红利低波100全收益（H20955）<br>
+数据截至：<span id="dataTime">—</span>　页面打开：<span id="openTime">—</span></div>
+<div class="card"><button onclick="load()">刷新</button><span id="status"></span></div>
+<div class="card" style="overflow-x:auto"><table>
+<thead><tr><th>指标</th><th>中证红利全收益<br><span style="font-weight:400">H00922</span></th>
+<th>红利低波100全收益<br><span style="font-weight:400">H20955</span></th></tr></thead>
+<tbody id="tbody"><tr><td colspan="3">数据加载中…</td></tr></tbody></table></div>
+<div class="card note"><b>口径说明</b><br>
+① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约16:30 与 20:30 各一次），非实时行情。<br>
+② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
+③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
+</div>
+<script>
+const INDICES=[{code:"H00922"},{code:"H20955"}];
+const WINDOWS=[120,250];
+const fmt=x=>x.toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%", cls=v=>v>0?"up":(v<0?"down":"");
+
+function analyze(series){
+  const n=series.length,latest=series[n-1],prev=series[n-2];
+  const res={latest,prev,dayChg:prev?(latest.close/prev.close-1)*100:null,wins:{}};
+  for(const N of WINDOWS){
+    const i0=n-1-N;
+    if(i0<0){res.wins[N]=null;continue;}
+    const startPt=series[i0],win=series.slice(i0);
+    let peak=-Infinity,peakDate="",mdd=0,pd="",td="";
+    for(const p of win){
+      if(p.close>peak){peak=p.close;peakDate=p.date;}
+      const dd=(peak-p.close)/peak;
+      if(dd>mdd){mdd=dd;pd=peakDate;td=p.date;}
+    }
+    res.wins[N]={start:startPt,chg:(latest.close/startPt.close-1)*100,mdd:mdd*100,peakDate:pd,troughDate:td};
+  }
+  return res;
+}
+function winCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足 ${N} 日</span>`;
+  return `<b>${fmt(w.start.close)}</b><div class="small">${w.start.date}（前${N}交易日）</div><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
+function mddCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足</span>`;
+  if(w.mdd<=0)return `0.00%<div class="small">窗口内未回撤</div>`;
+  return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${w.peakDate} → ${w.troughDate}</div>`;}
+function render(R){
+  const rows=[
+    ["最新交易日",a=>a.latest.date],
+    ["最新收盘点位",a=>"<b>"+fmt(a.latest.close)+"</b>"],
+    ["前一交易日收盘",a=>`${fmt(a.prev.close)}<div class="small">${a.prev.date}</div><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`],
+    ["前 120 交易日收盘",a=>winCell(a,120)],
+    ["前 250 交易日收盘",a=>winCell(a,250)],
+    ["近120交易日最大回撤",a=>mddCell(a,120)],
+    ["近250交易日最大回撤",a=>mddCell(a,250)]];
+  document.getElementById("tbody").innerHTML=rows.map(([label,fn])=>{
+    const cells=INDICES.map(idx=>{const r=R[idx.code];
+      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td>${fn(r)}</td>`;}).join("");
+    return `<tr><td class="metric">${label}</td>${cells}</tr>`;}).join("");
+}
+async function load(){
+  document.getElementById("status").textContent="加载中…";
+  try{
+    const res=await fetch("data.json?t="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw new Error("data.json 不存在（HTTP "+res.status+"）");
+    const data=await res.json();
+    const R={};
+    for(const idx of INDICES){
+      const s=data.indices[idx.code];
+      R[idx.code]=(s&&s.length>=2)?analyze(s):{error:"无数据"};
+    }
+    render(R);
+    document.getElementById("dataTime").textContent=
+      new Date(data.updated).toLocaleString("zh-CN");
+    document.getElementById("status").textContent="";
+  }catch(e){
+    document.getElementById("status").textContent=
+      "加载失败："+e.message+"。请到仓库 Actions 页面手动运行一次 workflow。";
+  }
+  document.getElementById("openTime").textContent=new Date().toLocaleString("zh-CN");
+}
+load();
+</script></body></html>
