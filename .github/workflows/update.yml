@@ -2,9 +2,9 @@ name: 每日更新指数数据
 
 on:
   schedule:
-    - cron: '30 8 * * 1-5'
-    - cron: '30 12 * * 1-5'
-  workflow_dispatch:
+    - cron: '0 10 * * 1-5'    # 北京时间 18:00（周一至周五）
+    - cron: '30 12 * * 1-5'   # 北京时间 20:30 兜底再跑一次
+  workflow_dispatch:           # 允许手动触发
 
 permissions:
   contents: write
