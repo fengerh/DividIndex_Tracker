@@ -20,6 +20,7 @@ button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px
   table{font-size:12.5px}
   th,td{padding:8px 6px}
   td.metric{width:96px;text-align:center;white-space:normal;word-break:break-word;line-height:1.5}
+  button+button{margin:10px 0 0 0!important}
 }
 </style></head><body><div class="wrap">
 <h1>红利指数每日监控</h1>
@@ -33,7 +34,7 @@ button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px
 ① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约16:30 与 20:30 各一次），非实时行情。<br>
 ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
 ③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
-<div class="card" style="text-align:left"><button onclick="load()">刷新</button><span id="status"></span></div>
+<div class="card" style="text-align:left"><button onclick="load()">刷新</button><button onclick="window.open('https://github.com/fengerh/DividIndex_Tracker/actions')" style="margin-left:10px">强制更新数据</button><span id="status"></span><div class="note" style="margin-top:10px">发现数据未更新？点击<b>“强制更新数据”</b>：在新打开的 Actions 页面左侧选中<b>“每日更新指数数据”</b>，点右侧<b>“Run workflow”</b>，分支选 <b>main</b>，再点绿色按钮；约 1 分钟后回到本页点<b>“刷新”</b>即可。</div></div>
 </div>
 <script>
 const INDICES=[{code:"H00922"},{code:"H20955"}];
