@@ -2,9 +2,11 @@ name: 每日更新指数数据
 
 on:
   schedule:
-    - cron: '0 10 * * 1-5'    # 北京时间 18:00（周一至周五）
-    - cron: '30 12 * * 1-5'   # 北京时间 20:30 兜底再跑一次
-  workflow_dispatch:           # 允许手动触发
+    - cron: '30 10 * * 1-5'   # 北京 18:30
+    - cron: '0 11 * * 1-5'    # 北京 19:00
+    - cron: '30 11 * * 1-5'   # 北京 19:30
+    - cron: '0 12 * * 1-5'    # 北京 20:00 兜底再跑一次
+  workflow_dispatch:          # 允许手动触发
 
 permissions:
   contents: write
