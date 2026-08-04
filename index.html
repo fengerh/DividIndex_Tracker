@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>红利指数每日监控 v20260804.2120</title>
+<title>红利指数每日监控 v20260804.2140</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--line:#e5e8ef;--txt:#1f2430;--sub:#6b7280;--red:#d43030;--green:#0a8f4d}
 *{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px}
@@ -31,7 +31,7 @@ button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px
 <th>红利低波100全收益<br><span style="font-weight:400">H20955</span></th></tr></thead>
 <tbody id="tbody"><tr><td colspan="3">数据加载中…</td></tr></tbody></table></div>
 <div class="card note"><b>口径说明</b><br>
-① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 18:30到20:00 共四次），非实时行情。<br>
+① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 18:30 到 20:00 共四次），非实时行情。<br>
 ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
 ③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
 <div class="card" style="text-align:left"><button onclick="window.open('https://github.com/fengerh/DividIndex_Tracker/actions/workflows/update.yml')">手动更新数据</button><span id="status"></span></div>
@@ -69,14 +69,14 @@ function render(R){
   const rows=[
     {label:"前一交易日收盘",date:a=>fmtDate(a.prev.date),cell:a=>`<b>${fmt(a.prev.close)}</b>`},
     {label:"最新收盘",date:a=>fmtDate(a.latest.date),cell:a=>`<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`},
-    {label:"前 120 交易日收盘",date:a=>fmtDate(a.wins[120].start.date),cell:a=>winCell(a,120)},
-    {label:"近120交易日最大回撤",date:null,cell:a=>mddCell(a,120)},
+    {label:"前 120 交易日收盘",date:a=>fmtDate(a.wins[120].start.date),cell:a=>winCell(a,120),bg:true},
+    {label:"近120交易日最大回撤",date:null,cell:a=>mddCell(a,120),bg:true},
     {label:"前 250 交易日收盘",date:a=>fmtDate(a.wins[250].start.date),cell:a=>winCell(a,250)},
     {label:"近250交易日最大回撤",date:null,cell:a=>mddCell(a,250)}];
   document.getElementById("tbody").innerHTML=rows.map(row=>{
     const r0=R[INDICES[0].code];
     const cells=INDICES.map(idx=>{const r=R[idx.code];
-      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td>${row.cell(r)}</td>`;}).join("");
+      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td${row.bg?' style="background:#fafbfe"':''}>${row.cell(r)}</td>`;}).join("");
     return `<tr><td class="metric">${row.label}${row.date&&r0&&!r0.error?`<div class="small">${row.date(r0)}</div>`:""}</td>${cells}</tr>`;}).join("");
 }
 async function load(){
