@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>红利指数每日监控 v20260804.1620</title>
+<title>红利指数每日监控 v20260804.1710</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--line:#e5e8ef;--txt:#1f2430;--sub:#6b7280;--red:#d43030;--green:#0a8f4d}
 *{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px}
@@ -9,6 +9,7 @@
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:center;vertical-align:middle}
 th{background:#f0f3fa;font-weight:600}td.metric{text-align:center;font-weight:600;background:#fafbfe;white-space:nowrap;width:190px}
 .up{color:var(--red)}.down{color:var(--green)}.small{font-size:12px;color:var(--sub);margin-top:2px}
+.badge{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;font-weight:600;line-height:1.6}
 button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer}button:disabled{opacity:.5}
 #status{font-size:12px;color:var(--sub);margin-top:8px}
 .note{font-size:12px;color:var(--sub);line-height:1.8}
@@ -39,6 +40,7 @@ const INDICES=[{code:"H00922"},{code:"H20955"}];
 const WINDOWS=[120,250];
 const fmt=x=>x.toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%", cls=v=>v>0?"up":(v<0?"down":"");
+const fmtDate=s=>s?s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8):"";
 
 function analyze(series){
   const n=series.length,latest=series[n-1],prev=series[n-2];
@@ -53,18 +55,18 @@ function analyze(series){
       const dd=(peak-p.close)/peak;
       if(dd>mdd){mdd=dd;pd=peakDate;td=p.date;}
     }
-    res.wins[N]={start:startPt,chg:(latest.close/startPt.close-1)*100,mdd:mdd*100,peakDate:pd,troughDate:td};
+    res.wins[N]={start:startPt,chg:(latest.close/startPt.close-1)*100,mdd:mdd*100,peakDate:pd,troughDate:td,ongoing:td===latest.date};
   }
   return res;
 }
 function winCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足 ${N} 日</span>`;
-  return `<b>${fmt(w.start.close)}</b><div class="small">${w.start.date}（前${N}交易日）</div><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
+  return `<b>${fmt(w.start.close)}</b><div class="small">${fmtDate(w.start.date)}（前${N}交易日）</div><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
 function mddCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足</span>`;
   if(w.mdd<=0)return `0.00%<div class="small">窗口内未回撤</div>`;
-  return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${w.peakDate} → ${w.troughDate}</div>`;}
+  return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>`+(w.ongoing?`<div><span class="badge">正在回撤中</span></div>`:"");}
 function render(R){
   const rows=[
-    ["最新交易日",a=>a.latest.date],
+    ["最新指数日期",a=>fmtDate(a.latest.date)],
     ["最新收盘点位",a=>"<b>"+fmt(a.latest.close)+"</b>"],
     ["前一交易日收盘",a=>`${fmt(a.prev.close)}<div class="small">${a.prev.date}</div><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`],
     ["前 120 交易日收盘",a=>winCell(a,120)],
