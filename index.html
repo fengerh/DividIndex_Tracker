@@ -67,7 +67,7 @@ function mddCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史
   return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>`+(w.ongoing?`<div><span class="badge">正在回撤中</span></div>`:"");}
 function render(R){
   const rows=[
-    {label:"前一交易日收盘",date:a=>fmtDate(a.prev.date),cell:a=>`<b>${fmt(a.prev.close)}</b>`},
+    {label:"前一交易日",date:a=>fmtDate(a.prev.date),cell:a=>`<b>${fmt(a.prev.close)}</b>`},
     {label:"最新收盘",date:a=>fmtDate(a.latest.date),cell:a=>`<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`},
     {label:"前 120 交易日收盘",date:a=>fmtDate(a.wins[120].start.date),cell:a=>winCell(a,120),bg:true},
     {label:"近120交易日最大回撤",date:null,cell:a=>mddCell(a,120),bg:true},
