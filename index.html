@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>红利指数每日监控 v20260804.1710</title>
+<title>红利指数每日监控 v20260804.1740</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--line:#e5e8ef;--txt:#1f2430;--sub:#6b7280;--red:#d43030;--green:#0a8f4d}
 *{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px}
@@ -38,7 +38,7 @@ button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px
 <script>
 const INDICES=[{code:"H00922"},{code:"H20955"}];
 const WINDOWS=[120,250];
-const fmt=x=>x.toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt=x=>x.toFixed(2);
 const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%", cls=v=>v>0?"up":(v<0?"down":"");
 const fmtDate=s=>s?s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8):"";
 
@@ -60,23 +60,24 @@ function analyze(series){
   return res;
 }
 function winCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足 ${N} 日</span>`;
-  return `<b>${fmt(w.start.close)}</b><div class="small">${fmtDate(w.start.date)}（前${N}交易日）</div><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
+  return `<b>${fmt(w.start.close)}</b><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
 function mddCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足</span>`;
   if(w.mdd<=0)return `0.00%<div class="small">窗口内未回撤</div>`;
   return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>`+(w.ongoing?`<div><span class="badge">正在回撤中</span></div>`:"");}
 function render(R){
   const rows=[
-    ["最新指数日期",a=>fmtDate(a.latest.date)],
-    ["最新收盘点位",a=>"<b>"+fmt(a.latest.close)+"</b>"],
-    ["前一交易日收盘",a=>`${fmt(a.prev.close)}<div class="small">${a.prev.date}</div><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`],
-    ["前 120 交易日收盘",a=>winCell(a,120)],
-    ["前 250 交易日收盘",a=>winCell(a,250)],
-    ["近120交易日最大回撤",a=>mddCell(a,120)],
-    ["近250交易日最大回撤",a=>mddCell(a,250)]];
-  document.getElementById("tbody").innerHTML=rows.map(([label,fn])=>{
+    {label:"最新指数日期",date:null,cell:a=>fmtDate(a.latest.date)},
+    {label:"最新收盘点位",date:null,cell:a=>"<b>"+fmt(a.latest.close)+"</b>"},
+    {label:"前一交易日收盘",date:a=>fmtDate(a.prev.date),cell:a=>`<b>${fmt(a.prev.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`},
+    {label:"前 120 交易日收盘",date:a=>fmtDate(a.wins[120].start.date),cell:a=>winCell(a,120)},
+    {label:"前 250 交易日收盘",date:a=>fmtDate(a.wins[250].start.date),cell:a=>winCell(a,250)},
+    {label:"近120交易日最大回撤",date:null,cell:a=>mddCell(a,120)},
+    {label:"近250交易日最大回撤",date:null,cell:a=>mddCell(a,250)}];
+  document.getElementById("tbody").innerHTML=rows.map(row=>{
+    const r0=R[INDICES[0].code];
     const cells=INDICES.map(idx=>{const r=R[idx.code];
-      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td>${fn(r)}</td>`;}).join("");
-    return `<tr><td class="metric">${label}</td>${cells}</tr>`;}).join("");
+      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td>${row.cell(r)}</td>`;}).join("");
+    return `<tr><td class="metric">${row.label}${row.date&&r0&&!r0.error?`<div class="small">${row.date(r0)}</div>`:""}</td>${cells}</tr>`;}).join("");
 }
 async function load(){
   document.getElementById("status").textContent="加载中…";
