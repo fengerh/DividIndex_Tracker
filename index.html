@@ -1,104 +1,283 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>红利指数每日监控 v20260804.2140</title>
-<style>
-:root{--bg:#f6f7fb;--card:#fff;--line:#e5e8ef;--txt:#1f2430;--sub:#6b7280;--red:#d43030;--green:#0a8f4d}
-*{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px}
-.wrap{max-width:980px;margin:0 auto}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--sub);font-size:13px;margin-bottom:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid var(--line);padding:10px 12px;text-align:center;vertical-align:middle}
-th{background:#f0f3fa;font-weight:600}td.metric{text-align:center;font-weight:600;background:#fafbfe;white-space:nowrap;width:190px}
-.up{color:var(--red)}.down{color:var(--green)}.small{font-size:12px;color:var(--sub);margin-top:2px}
-.badge{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;font-weight:600;line-height:1.6}
-button{background:#2456d6;color:#fff;border:0;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer}button:disabled{opacity:.5}
-#status{font-size:12px;color:var(--sub);margin-top:8px}
-.note{font-size:12px;color:var(--sub);line-height:1.8}
-@media (max-width:480px){
-  body{padding:12px}
-  h1{font-size:19px}
-  .card{padding:12px;border-radius:10px}
-  table{font-size:12.5px}
-  th,td{padding:8px 6px}
-  td.metric{width:96px;text-align:center;white-space:normal;word-break:break-word;line-height:1.5}
-  button+button{margin:10px 0 0 0!important}
-}
-</style></head><body><div class="wrap">
-<h1>红利指数每日监控</h1>
-<div class="sub">中证红利全收益（H00922）· 红利低波100全收益（H20955）<br>
-数据截至：<span id="dataTime">—</span>　页面打开：<span id="openTime">—</span></div>
-<div class="card" style="overflow-x:auto"><table>
-<thead><tr><th>指标</th><th>中证红利全收益<br><span style="font-weight:400">H00922</span></th>
-<th>红利低波100全收益<br><span style="font-weight:400">H20955</span></th></tr></thead>
-<tbody id="tbody"><tr><td colspan="3">数据加载中…</td></tr></tbody></table></div>
-<div class="card note"><b>口径说明</b><br>
-① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 18:30 到 20:00 共四次），非实时行情。<br>
-② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
-③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
-<div class="card" style="text-align:left"><button onclick="window.open('https://github.com/fengerh/DividIndex_Tracker/actions/workflows/update.yml')">手动更新数据</button><span id="status"></span></div>
-</div>
-<script>
-const INDICES=[{code:"H00922"},{code:"H20955"}];
-const WINDOWS=[120,250];
-const fmt=x=>x.toFixed(2);
-const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%", cls=v=>v>0?"up":(v<0?"down":"");
-const fmtDate=s=>s?s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8):"";
+<!DOCTYPE html>
+<html lang="zh-CN">
 
-function analyze(series){
-  const n=series.length,latest=series[n-1],prev=series[n-2];
-  const res={latest,prev,dayChg:prev?(latest.close/prev.close-1)*100:null,wins:{}};
-  for(const N of WINDOWS){
-    const i0=n-1-N;
-    if(i0<0){res.wins[N]=null;continue;}
-    const startPt=series[i0],win=series.slice(i0);
-    let peak=-Infinity,peakDate="",mdd=0,pd="",td="";
-    for(const p of win){
-      if(p.close>peak){peak=p.close;peakDate=p.date;}
-      const dd=(peak-p.close)/peak;
-      if(dd>mdd){mdd=dd;pd=peakDate;td=p.date;}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>红利指数每日监控 v20260805.1100</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #fff;
+      --line: #e5e8ef;
+      --txt: #1f2430;
+      --sub: #6b7280;
+      --red: #d43030;
+      --green: #0a8f4d
     }
-    res.wins[N]={start:startPt,chg:(latest.close/startPt.close-1)*100,mdd:mdd*100,peakDate:pd,troughDate:td,ongoing:td===latest.date};
-  }
-  return res;
-}
-function winCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足 ${N} 日</span>`;
-  return `<b>${fmt(w.start.close)}</b><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;}
-function mddCell(a,N){const w=a.wins[N];if(!w)return `<span class="small">历史不足</span>`;
-  if(w.mdd<=0)return `0.00%<div class="small">窗口内未回撤</div>`;
-  return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>`+(w.ongoing?`<div><span class="badge">正在回撤中</span></div>`:"");}
-function render(R){
-  const rows=[
-    {label:"前一交易日",date:a=>fmtDate(a.prev.date),cell:a=>`<b>${fmt(a.prev.close)}</b>`},
-    {label:"最新收盘",date:a=>fmtDate(a.latest.date),cell:a=>`<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`},
-    {label:"前 120 交易日收盘",date:a=>fmtDate(a.wins[120].start.date),cell:a=>winCell(a,120),bg:true},
-    {label:"近120交易日最大回撤",date:null,cell:a=>mddCell(a,120),bg:true},
-    {label:"前 250 交易日收盘",date:a=>fmtDate(a.wins[250].start.date),cell:a=>winCell(a,250)},
-    {label:"近250交易日最大回撤",date:null,cell:a=>mddCell(a,250)}];
-  document.getElementById("tbody").innerHTML=rows.map(row=>{
-    const r0=R[INDICES[0].code];
-    const cells=INDICES.map(idx=>{const r=R[idx.code];
-      return r.error?`<td><span class="small">失败：${r.error}</span></td>`:`<td${row.bg?' style="background:#fafbfe"':''}>${row.cell(r)}</td>`;}).join("");
-    return `<tr><td class="metric">${row.label}${row.date&&r0&&!r0.error?`<div class="small">${row.date(r0)}</div>`:""}</td>${cells}</tr>`;}).join("");
-}
-async function load(){
-  document.getElementById("status").textContent="加载中…";
-  try{
-    const res=await fetch("data.json?t="+Date.now(),{cache:"no-store"});
-    if(!res.ok)throw new Error("data.json 不存在（HTTP "+res.status+"）");
-    const data=await res.json();
-    const R={};
-    for(const idx of INDICES){
-      const s=data.indices[idx.code];
-      R[idx.code]=(s&&s.length>=2)?analyze(s):{error:"无数据"};
+
+    * {
+      box-sizing: border-box
     }
-    render(R);
-    document.getElementById("dataTime").textContent=
-      new Date(data.updated).toLocaleString("zh-CN");
-    document.getElementById("status").textContent="";
-  }catch(e){
-    document.getElementById("status").textContent=
-      "加载失败："+e.message+"。请到仓库 Actions 页面手动运行一次 workflow。";
-  }
-  document.getElementById("openTime").textContent=new Date().toLocaleString("zh-CN");
-}
-load();
-</script></body></html>
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--txt);
+      padding: 24px
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 4px
+    }
+
+    .sub {
+      color: var(--sub);
+      font-size: 13px;
+      margin-bottom: 16px
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: center;
+      vertical-align: middle
+    }
+
+    th {
+      background: #f0f3fa;
+      font-weight: 600
+    }
+
+    td.metric {
+      text-align: center;
+      font-weight: 600;
+      background: #fafbfe;
+      white-space: nowrap;
+      width: 190px
+    }
+
+    .up {
+      color: var(--red)
+    }
+
+    .down {
+      color: var(--green)
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 2px
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 10px;
+      background: var(--green);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.6
+    }
+
+    button {
+      background: #2456d6;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 14px;
+      cursor: pointer
+    }
+
+    button:disabled {
+      opacity: .5
+    }
+
+    #status {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 8px
+    }
+
+    .note {
+      font-size: 12px;
+      color: var(--sub);
+      line-height: 1.8
+    }
+
+    @media (max-width:480px) {
+      body {
+        padding: 12px
+      }
+
+      h1 {
+        font-size: 19px
+      }
+
+      .card {
+        padding: 12px;
+        border-radius: 10px
+      }
+
+      table {
+        font-size: 12.5px
+      }
+
+      th,
+      td {
+        padding: 8px 6px
+      }
+
+      td.metric {
+        width: 96px;
+        text-align: center;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.5
+      }
+
+      button+button {
+        margin: 10px 0 0 0 !important
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>红利指数每日监控</h1>
+    <div class="sub">中证红利全收益（H00922）· 红利低波100全收益（H20955）<br>
+      数据截至：<span id="dataTime">—</span>　页面打开：<span id="openTime">—</span></div>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>指标</th>
+            <th>中证红利全收益<br><span style="font-weight:400">H00922</span></th>
+            <th>红利低波100全收益<br><span style="font-weight:400">H20955</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr>
+            <td colspan="3">数据加载中…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card note"><b>口径说明</b><br>
+      ① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 18:30 到 20:00 共四次），非实时行情。<br>
+      ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
+      ③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
+    <div class="card" style="text-align:left"><button
+        onclick="window.open('https://github.com/fengerh/DividIndex_Tracker/actions/workflows/update.yml')">手动更新数据</button><span
+        id="status"></span></div>
+  </div>
+  <script>
+    const INDICES = [{ code: "H00922" }, { code: "H20955" }];
+    const WINDOWS = [120, 250];
+    const fmt = x => x.toFixed(2);
+    const pct = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%", cls = v => v > 0 ? "up" : (v < 0 ? "down" : "");
+    const fmtDate = s => s ? s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8) : "";
+
+    function analyze(series) {
+      const n = series.length, latest = series[n - 1], prev = series[n - 2];
+      const res = { latest, prev, dayChg: prev ? (latest.close / prev.close - 1) * 100 : null, wins: {} };
+      for (const N of WINDOWS) {
+        const i0 = n - 1 - N;
+        if (i0 < 0) { res.wins[N] = null; continue; }
+        const startPt = series[i0], win = series.slice(i0);
+        let peak = -Infinity, peakDate = "", pc = "", mdd = 0, pd = "", pc2 = "", td = "", tc = "";
+        for (const p of win) {
+          if (p.close > peak) { peak = p.close; peakDate = p.date; pc = p.close; }
+          const dd = (peak - p.close) / peak;
+          if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
+        }
+        res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
+      }
+      return res;
+    }
+    function winCell(a, N) {
+      const w = a.wins[N]; if (!w) return `<span class="small">历史不足 ${N} 日</span>`;
+      return `<b>${fmt(w.start.close)}</b><div class="${cls(w.chg)}">区间涨跌 ${pct(w.chg)}</div>`;
+    }
+    function mddCell(a, N) {
+      const w = a.wins[N]; if (!w) return `<span class="small">历史不足</span>`;
+      if (w.mdd <= 0) return `0.00%<div class="small">窗口内未回撤</div>`;
+      const ddLatest = (w.peakClose - a.latest.close) / w.peakClose * 100;
+      let badge = "";
+      if (w.troughDate === a.latest.date) {
+        badge = `<div><span class="badge">最大回撤日</span></div>`;
+      } else if (a.latest.close <= w.troughClose + (w.peakClose - w.troughClose) / 3) {
+        badge = `<div><span class="badge">回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
+      }
+      return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
+    }
+    function render(R) {
+      const rows = [
+        { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>` },
+        { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>` },
+        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: true },
+        { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120), bg: true },
+        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250) },
+        { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250) }];
+      document.getElementById("tbody").innerHTML = rows.map(row => {
+        const r0 = R[INDICES[0].code];
+        const cells = INDICES.map(idx => {
+          const r = R[idx.code];
+          return r.error ? `<td><span class="small">失败：${r.error}</span></td>` : `<td${row.bg ? ' style="background:#fafbfe"' : ''}>${row.cell(r)}</td>`;
+        }).join("");
+        return `<tr><td class="metric">${row.label}${row.date && r0 && !r0.error ? `<div class="small">${row.date(r0)}</div>` : ""}</td>${cells}</tr>`;
+      }).join("");
+    }
+    async function load() {
+      document.getElementById("status").textContent = "加载中…";
+      try {
+        const res = await fetch("data.json?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("data.json 不存在（HTTP " + res.status + "）");
+        const data = await res.json();
+        const R = {};
+        for (const idx of INDICES) {
+          const s = data.indices[idx.code];
+          R[idx.code] = (s && s.length >= 2) ? analyze(s) : { error: "无数据" };
+        }
+        render(R);
+        document.getElementById("dataTime").textContent =
+          new Date(data.updated).toLocaleString("zh-CN");
+        document.getElementById("status").textContent = "";
+      } catch (e) {
+        document.getElementById("status").textContent =
+          "加载失败：" + e.message + "。请到仓库 Actions 页面手动运行一次 workflow。";
+      }
+      document.getElementById("openTime").textContent = new Date().toLocaleString("zh-CN");
+    }
+    load();
+  </script>
+</body>
+
+</html>
