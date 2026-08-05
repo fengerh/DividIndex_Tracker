@@ -1,4 +1,4 @@
-import json, urllib.request, ssl, datetime
+import json, urllib.request, ssl, datetime, os
 
 INDICES = ["H00922", "H20955"]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -29,11 +29,24 @@ def fetch(code):
     out.sort(key=lambda x: x["date"])
     return out
 
-data = {"updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "indices": {}}
+new_indices = {}
 for c in INDICES:
-    data["indices"][c] = fetch(c)
-    print(c, len(data["indices"][c]), "个交易日")
+    new_indices[c] = fetch(c)
+    print(c, len(new_indices[c]), "个交易日")
 
-with open("data.json", "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False)
+# 读取现有 data.json，若指数数据未变化则保持 updated 不变，避免重复提交
+old_data = None
+try:
+    with open("data.json", encoding="utf-8") as f:
+        old_data = json.load(f)
+except (OSError, ValueError):
+    old_data = None
+
+if old_data and old_data.get("indices") == new_indices:
+    print("指数数据无变化，跳过更新 data.json")
+else:
+    data = {"updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "indices": new_indices}
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    print("数据已更新")
