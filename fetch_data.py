@@ -1,5 +1,5 @@
 import json, urllib.request, ssl, datetime
-
+ 
 INDICES = ["H00922", "H20955"]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
