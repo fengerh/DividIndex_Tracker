@@ -4,16 +4,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260814.0920</title>
+  <title>红利指数每日监控 v20260814.1400</title>
   <style>
     :root {
       --bg: #f6f7fb;
       --card: #fff;
-      --line: #e5e8ef;
+      --line: #e8eaf0;
       --txt: #1f2430;
-      --sub: #6b7280;
-      --red: #d43030;
-      --green: #0a8f4d
+      --sub: #8a8f9c;
+      --red: #c05a52;
+      --green: #4a8f6a;
+      --bg-latest: #eef3fb;
+      --bg-year: #faf5e8;
+      --bg-120: #f4f5f7;
+      --bg-250: #eef1f4
     }
 
     * {
@@ -60,21 +64,23 @@
 
     th,
     td {
-      border: 1px solid var(--line);
-      padding: 10px 12px;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 14px;
       text-align: center;
       vertical-align: middle
     }
 
     th {
-      background: #f0f3fa;
-      font-weight: 600
+      background: #eef1f6;
+      font-weight: 600;
+      border-bottom: 1px solid #d9dde6
     }
 
     td.metric {
       text-align: center;
-      font-weight: 600;
-      background: #fafbfe;
+      font-weight: 400;
+      color: var(--sub);
       white-space: nowrap;
       width: 190px
     }
@@ -285,21 +291,21 @@
     }
     function render(R) {
       const rows = [
-        { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>` },
-        { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>` },
-        { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: true },
-        { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: true },
-        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120) },
-        { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120) },
-        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: true },
-        { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250), bg: true }];
+        { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>`, bg: "var(--bg-latest)" },
+        { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`, bg: "var(--bg-latest)" },
+        { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: "var(--bg-year)" },
+        { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: "var(--bg-year)" },
+        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: "var(--bg-120)" },
+        { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120), bg: "var(--bg-120)" },
+        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: "var(--bg-250)" },
+        { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250), bg: "var(--bg-250)" }];
       document.getElementById("tbody").innerHTML = rows.map(row => {
         const r0 = R[INDICES[0].code];
         const cells = INDICES.map(idx => {
           const r = R[idx.code];
-          return r.error ? `<td><span class="small">失败：${r.error}</span></td>` : `<td${row.bg ? ' style="background:#fafbfe"' : ''}>${row.cell(r)}</td>`;
+          return r.error ? `<td><span class="small">失败：${r.error}</span></td>` : `<td style="background:${row.bg}">${row.cell(r)}</td>`;
         }).join("");
-        return `<tr><td class="metric">${row.label}${row.date && r0 && !r0.error ? `<div class="small">${row.date(r0)}</div>` : ""}</td>${cells}</tr>`;
+        return `<tr><td class="metric" style="background:${row.bg}">${row.label}${row.date && r0 && !r0.error ? `<div class="small">${row.date(r0)}</div>` : ""}</td>${cells}</tr>`;
       }).join("");
     }
     async function load() {
