@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260805.1100</title>
+  <title>红利指数每日监控 v20260814.0920</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -220,6 +220,33 @@
         }
         res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
       }
+      // 年度计算：按当前自然年为基准
+      const thisYear = new Date().getFullYear();
+      const year = { thisYear, prevYearClose: null, prevYearDate: "", prevYearChg: null, mdd: null };
+      // 上一年度最后一个交易日
+      for (let i = n - 1; i >= 0; i--) {
+        if (+series[i].date.slice(0, 4) === thisYear - 1) {
+          year.prevYearClose = series[i].close;
+          year.prevYearDate = series[i].date;
+          break;
+        }
+      }
+      if (year.prevYearClose) {
+        year.prevYearChg = (latest.close / year.prevYearClose - 1) * 100;
+      }
+      // 本年度最大回撤（从年初到最新交易日）
+      const yStart = series.findIndex(p => +p.date.slice(0, 4) === thisYear);
+      if (yStart >= 0 && yStart < n) {
+        const win = series.slice(yStart);
+        let peak = -Infinity, peakDate = "", pc = "", mdd = 0, pd = "", pc2 = "", td = "", tc = "";
+        for (const p of win) {
+          if (p.close > peak) { peak = p.close; peakDate = p.date; pc = p.close; }
+          const dd = (peak - p.close) / peak;
+          if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
+        }
+        year.mdd = { mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
+      }
+      res.year = year;
       return res;
     }
     function winCell(a, N) {
@@ -238,14 +265,34 @@
       }
       return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
     }
+    function yearCloseCell(a) {
+      const y = a.year;
+      if (!y || !y.prevYearClose) return `<span class="small">历史不足</span>`;
+      return `<b>${fmt(y.prevYearClose)}</b><div class="${cls(y.prevYearChg)}">区间涨跌 ${pct(y.prevYearChg)}</div>`;
+    }
+    function yearMddCell(a) {
+      const w = a.year && a.year.mdd;
+      if (!w) return `<span class="small">本年无数据</span>`;
+      if (w.mdd <= 0) return `0.00%<div class="small">本年未回撤</div>`;
+      const ddLatest = (w.peakClose - a.latest.close) / w.peakClose * 100;
+      let badge = "";
+      if (w.troughDate === a.latest.date) {
+        badge = `<div><span class="badge">最大回撤日</span></div>`;
+      } else if (a.latest.close <= w.troughClose + (w.peakClose - w.troughClose) / 3) {
+        badge = `<div><span class="badge">回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
+      }
+      return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
+    }
     function render(R) {
       const rows = [
         { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>` },
         { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>` },
-        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: true },
-        { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120), bg: true },
-        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250) },
-        { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250) }];
+        { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: true },
+        { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: true },
+        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120) },
+        { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120) },
+        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: true },
+        { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250), bg: true }];
       document.getElementById("tbody").innerHTML = rows.map(row => {
         const r0 = R[INDICES[0].code];
         const cells = INDICES.map(idx => {
