@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260819.2310</title>
+  <title>红利指数每日监控 v20260824.2330</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -109,6 +109,10 @@
       font-size: 11px;
       font-weight: 600;
       line-height: 1.6
+    }
+
+    .badge-high {
+      background: var(--red)
     }
 
     button {
@@ -224,11 +228,11 @@
           const dd = (peak - p.close) / peak;
           if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
         }
-        res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
+        res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, peakCloseMax: peak, troughDate: td, troughClose: tc, ongoing: td === latest.date };
       }
       // 年度计算：按当前自然年为基准
       const thisYear = new Date().getFullYear();
-      const year = { thisYear, prevYearClose: null, prevYearDate: "", prevYearChg: null, mdd: null };
+      const year = { thisYear, prevYearClose: null, prevYearDate: "", prevYearChg: null, mdd: null, peakCloseMax: null };
       // 上一年度最后一个交易日
       for (let i = n - 1; i >= 0; i--) {
         if (+series[i].date.slice(0, 4) === thisYear - 1) {
@@ -251,6 +255,7 @@
           if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
         }
         year.mdd = { mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
+        year.peakCloseMax = peak;
       }
       res.year = year;
       return res;
@@ -289,10 +294,17 @@
       }
       return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
     }
+    function newHighCell(a) {
+      const tags = [];
+      if (a.year && a.year.peakCloseMax != null && a.latest.close >= a.year.peakCloseMax) tags.push("当年新高");
+      if (a.wins[120] && a.wins[120].peakCloseMax != null && a.latest.close >= a.wins[120].peakCloseMax) tags.push("120日新高");
+      if (a.wins[250] && a.wins[250].peakCloseMax != null && a.latest.close >= a.wins[250].peakCloseMax) tags.push("250日新高");
+      return tags.length ? `<div style="display:flex;justify-content:center;gap:6px;margin-top:6px">${tags.map(t => `<span class="badge badge-high">${t}</span>`).join("")}</div>` : "";
+    }
     function render(R) {
       const rows = [
         { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>`, bg: "var(--bg-latest)" },
-        { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>`, bg: "var(--bg-latest)" },
+        { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>${newHighCell(a)}`, bg: "var(--bg-latest)" },
         { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: "var(--bg-year)" },
         { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: "var(--bg-year)" },
         { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: "var(--bg-120)" },
