@@ -115,6 +115,14 @@
       background: var(--red)
     }
 
+    .high-badges {
+      display: flex;
+      justify-content: center;
+      flex-wrap: nowrap;
+      gap: 6px;
+      margin-top: 6px
+    }
+
     button {
       background: #2456d6;
       color: #fff;
@@ -170,6 +178,10 @@
         white-space: normal;
         word-break: break-word;
         line-height: 1.5
+      }
+
+      .high-badges {
+        flex-wrap: wrap
       }
 
       button+button {
@@ -299,7 +311,7 @@
       if (a.year && a.year.peakCloseMax != null && a.latest.close >= a.year.peakCloseMax) tags.push("当年新高");
       if (a.wins[120] && a.wins[120].peakCloseMax != null && a.latest.close >= a.wins[120].peakCloseMax) tags.push("120日新高");
       if (a.wins[250] && a.wins[250].peakCloseMax != null && a.latest.close >= a.wins[250].peakCloseMax) tags.push("250日新高");
-      return tags.length ? `<div style="display:flex;justify-content:center;gap:6px;margin-top:6px">${tags.map(t => `<span class="badge badge-high">${t}</span>`).join("")}</div>` : "";
+      return tags.length ? `<div class="high-badges">${tags.map(t => `<span class="badge badge-high">${t}</span>`).join("")}</div>` : "";
     }
     function render(R) {
       const rows = [
