@@ -20,6 +20,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: 抓取中证指数数据
+        env:
+          FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: python fetch_data.py
       - name: 提交并推送
         run: |
