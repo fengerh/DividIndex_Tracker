@@ -1,4 +1,4 @@
-import json, urllib.request, ssl, datetime, sys
+import json, urllib.request, ssl, datetime, sys, os
 
 try:
     from zoneinfo import ZoneInfo
@@ -55,7 +55,10 @@ def is_trading_day(now):
     return True
 
 
-if not is_trading_day(datetime.datetime.now(datetime.timezone.utc)):
+# 手动触发（FORCE_UPDATE=1）时强制抓取，跳过交易日判定；
+# 定时触发则只在交易日收盘后运行，避免非交易日白跑。
+FORCE_UPDATE = os.environ.get("FORCE_UPDATE") == "1"
+if not FORCE_UPDATE and not is_trading_day(datetime.datetime.now(datetime.timezone.utc)):
     print("非 A 股交易日或未到收盘时间（北京时间 15:00 后），跳过本次更新。")
     sys.exit(0)
 # ============ 交易日判定结束 ============
