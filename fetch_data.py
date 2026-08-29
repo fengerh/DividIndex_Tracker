@@ -1,8 +1,64 @@
 import json, urllib.request, ssl, datetime, sys
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
+
 INDICES = ["H00922", "H20955"]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+# ============ 交易日判定 ============
+# 需求：只在 A 股交易日收盘后（北京时间 15:00 之后）抓取数据，避免非交易日白跑
+# 和排队推迟导致的重复/无意义运行。非交易日直接退出（exit 0），不写数据、不告警。
+
+# A 股休市日（法定节假日，仅周末之外补休/调休的特殊休市日）。
+# 这里维护一份手动节假日表，含当年已确认及次年初部分调休休市日。
+# 说明：该表无法覆盖未来全部节假日，但本脚本"工作日默认视为交易日"，
+# 仅在命中表内休市日时才判定为非交易日；即便某节假日未收录导致白跑一次，
+# 数据也仅是多抓取相同数据，不会污染（受下方 MIN_RECORDS 校验保护）。
+A_SHARE_HOLIDAYS = {
+    # 2026 年（农历/公历休市日，非周末部分）
+    "2026-01-01", "2026-01-02",           # 元旦
+    "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19",
+    "2026-02-20", "2026-02-23",           # 春节（2/16-2/20 + 调休）
+    "2026-04-06",                          # 清明
+    "2026-05-01",                          # 劳动节
+    "2026-06-19",                          # 端午
+    "2026-09-25",                          # 中秋
+    "2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06",
+    "2026-10-07", "2026-10-08",           # 国庆
+}
+
+
+def is_trading_day(now):
+    """判断当前时间是否为 A 股交易日收盘后。
+    规则：
+      1. 周末不交易；
+      2. 命中休市日表不交易；
+      3. 北京时间需已过 15:00（收盘后），避免抓取到当日不完整数据。
+    """
+    tz = ZoneInfo("Asia/Shanghai") if ZoneInfo else datetime.timezone(
+        datetime.timedelta(hours=8))
+    local = now.astimezone(tz)
+    date_str = f"{local.year:04d}-{local.month:02d}-{local.day:02d}"
+    # 周末
+    if local.weekday() >= 5:
+        return False
+    # 法定休市日
+    if date_str in A_SHARE_HOLIDAYS:
+        return False
+    # 收盘后
+    if local.hour < 15:
+        return False
+    return True
+
+
+if not is_trading_day(datetime.datetime.now(datetime.timezone.utc)):
+    print("非 A 股交易日或未到收盘时间（北京时间 15:00 后），跳过本次更新。")
+    sys.exit(0)
+# ============ 交易日判定结束 ============
 
 def fetch(code):
     end = datetime.date.today()
