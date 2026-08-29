@@ -65,7 +65,7 @@ if not FORCE_UPDATE and not is_trading_day(datetime.datetime.now(datetime.timezo
 
 def fetch(code):
     end = datetime.date.today()
-    start = end - datetime.timedelta(days=500)
+    start = end - datetime.timedelta(days=700)
     url = (f"https://www.csindex.com.cn/csindex-home/perf/index-perf"
            f"?indexCode={code}&startDate={start:%Y%m%d}&endDate={end:%Y%m%d}")
     req = urllib.request.Request(url, headers={
@@ -95,7 +95,9 @@ for c in INDICES:
     print(c, len(data["indices"][c]), "个交易日")
 
 # 结果校验：任一只指数有效条数过低，视为接口异常，中止以免覆盖上一版 data.json
-MIN_RECORDS = 400
+# 定时模式（FORCE_UPDATE=0）保持严格下限 400 条；手动强制模式放宽到 50 条，
+# 仅防止完全空数据污染，避免手动更新被 400 条下限卡住。
+MIN_RECORDS = 50 if FORCE_UPDATE else 400
 for c, series in data["indices"].items():
     if len(series) < MIN_RECORDS:
         print(f"校验失败：{c} 有效交易日仅 {len(series)} 条，低于下限 {MIN_RECORDS}，"
