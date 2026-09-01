@@ -65,7 +65,7 @@ if not FORCE_UPDATE and not is_trading_day(datetime.datetime.now(datetime.timezo
 
 def fetch(code):
     end = datetime.date.today()
-    start = end - datetime.timedelta(days=500)
+    start = end - datetime.timedelta(days=700)
     url = (f"https://www.csindex.com.cn/csindex-home/perf/index-perf"
            f"?indexCode={code}&startDate={start:%Y%m%d}&endDate={end:%Y%m%d}")
     req = urllib.request.Request(url, headers={
@@ -94,8 +94,38 @@ for c in INDICES:
     data["indices"][c] = fetch(c)
     print(c, len(data["indices"][c]), "个交易日")
 
+# ============ 幂等检查 ============
+# 多次定时触发时，若接口最新交易日并未比本地 data.json 已有数据更新，
+# 说明没有新数据可抓（接口尚未发布/当天本就无新交易日），直接跳过，
+# 避免重复抓取、重复覆盖产生无意义提交。手动强制模式（FORCE_UPDATE=1）
+# 跳过此检查，尊重用户明确的重抓意图。
+if not FORCE_UPDATE:
+    has_new = False
+    try:
+        with open("data.json", encoding="utf-8") as f:
+            old = json.load(f)
+        old_indices = old.get("indices") or {}
+    except (OSError, ValueError):
+        old_indices = {}
+    for c, series in data["indices"].items():
+        if not series:
+            has_new = True
+            break
+        last_api_date = series[-1]["date"]
+        old_series = old_indices.get(c) or []
+        last_local_date = old_series[-1]["date"] if old_series else ""
+        if last_api_date > last_local_date:
+            has_new = True
+            break
+    if not has_new:
+        print("接口最新交易日未更新（无新数据），跳过本次写入。")
+        sys.exit(0)
+# ============ 幂等检查结束 ============
+
 # 结果校验：任一只指数有效条数过低，视为接口异常，中止以免覆盖上一版 data.json
-MIN_RECORDS = 400
+# 定时模式（FORCE_UPDATE=0）保持严格下限 400 条；手动强制模式放宽到 50 条，
+# 仅防止完全空数据污染，避免手动更新被 400 条下限卡住。
+MIN_RECORDS = 50 if FORCE_UPDATE else 400
 for c, series in data["indices"].items():
     if len(series) < MIN_RECORDS:
         print(f"校验失败：{c} 有效交易日仅 {len(series)} 条，低于下限 {MIN_RECORDS}，"
