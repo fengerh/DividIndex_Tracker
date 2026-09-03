@@ -2,9 +2,9 @@ name: 每日更新指数数据
 
 on:
   schedule:
-    - cron: "0 19 * * 1-5"    # 北京时间 19:00 主跑（使用 IANA 时区 Asia/Shanghai）
+    - cron: "0 16 * * 1-5"    # 北京时间 16:00 主跑（IANA 时区 Asia/Shanghai）
       timezone: "Asia/Shanghai"
-    - cron: "0 20 * * 1-5"    # 北京时间 20:00 兜底（覆盖 GitHub schedule 偶发排队延迟）
+    - cron: "0 17 * * 1-5"    # 北京时间 17:00 兜底
       timezone: "Asia/Shanghai"
   workflow_dispatch:          # 允许手动触发
 
