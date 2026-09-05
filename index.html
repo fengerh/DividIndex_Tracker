@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260902.1000</title>
+  <title>红利指数每日监控 v20260905.1510</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -88,6 +88,10 @@
 
     tr.sep td {
       border-bottom: 1px solid var(--sep)
+    }
+
+    td.metric b.metric-strong {
+      color: #4a5568
     }
 
     .up {
@@ -321,16 +325,16 @@
     function render(R) {
       // 行按时间窗口分组：顶部行固定、年度行/120日行/250日行按下述顺序拼接
       const topRows = [
-        { label: "前一交易日", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>`, bg: "var(--bg-latest)" },
+        { label: "前一交易日 收盘", date: a => fmtDate(a.prev.date), cell: a => `<b>${fmt(a.prev.close)}</b>`, bg: "var(--bg-latest)", strong: true },
         { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>${newHighCell(a)}`, bg: "var(--bg-latest)", sep: true }];
       const yearRows = [
-        { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: "var(--bg-year)" },
+        { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: "var(--bg-year)", strong: true },
         { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: "var(--bg-year)", sep: true }];
       const rows120 = [
-        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: "var(--bg-120)" },
+        { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: "var(--bg-120)", strong: true },
         { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120), bg: "var(--bg-120)", sep: true }];
       const rows250 = [
-        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: "var(--bg-250)" },
+        { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: "var(--bg-250)", strong: true },
         { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250), bg: "var(--bg-250)", sep: true }];
       // 上半年（1-6月）：本年度跨度短于120交易日，年度行在上；下半年（7-12月）：120日行上移。
       // 前250交易日跨度最长（约一年多），始终位于最底部。
@@ -339,11 +343,15 @@
         : [...topRows, ...rows120, ...yearRows, ...rows250];
       document.getElementById("tbody").innerHTML = rows.map(row => {
         const r0 = R[INDICES[0].code];
+        // 起点行：仅加粗"收盘"之前的词头，"收盘"（含前空格）保持 700 灰色原样
+        const labelHtml = row.strong && row.label.endsWith(" 收盘")
+          ? `<b class="metric-strong">${row.label.slice(0, row.label.lastIndexOf(" 收盘"))}</b>${row.label.slice(row.label.lastIndexOf(" 收盘"))}`
+          : row.label;
         const cells = INDICES.map(idx => {
           const r = R[idx.code];
           return r.error ? `<td><span class="small">失败：${r.error}</span></td>` : `<td style="background:${row.bg}">${row.cell(r)}</td>`;
         }).join("");
-        return `<tr${row.sep ? ' class="sep"' : ""}><td class="metric" style="background:${row.bg}">${row.label}${row.date && r0 && !r0.error ? `<div class="small">${row.date(r0)}</div>` : ""}</td>${cells}</tr>`;
+        return `<tr${row.sep ? ' class="sep"' : ""}><td class="metric" style="background:${row.bg}">${labelHtml}${row.date && r0 && !r0.error ? `<div class="small">${row.date(r0)}</div>` : ""}</td>${cells}</tr>`;
       }).join("");
     }
     async function load() {
