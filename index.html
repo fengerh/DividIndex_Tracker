@@ -303,7 +303,7 @@
       if (w.troughDate === a.latest.date) {
         badge = `<div><span class="badge">最大回撤日</span></div>`;
       } else if (a.latest.close <= w.troughClose + (w.peakClose - w.troughClose) / 3) {
-        badge = `<div><span class="badge">回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
+        badge = `<div><span class="badge">目前回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
       }
       return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
     }
@@ -321,7 +321,7 @@
       if (w.troughDate === a.latest.date) {
         badge = `<div><span class="badge">最大回撤日</span></div>`;
       } else if (a.latest.close <= w.troughClose + (w.peakClose - w.troughClose) / 3) {
-        badge = `<div><span class="badge">回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
+        badge = `<div><span class="badge">目前回撤中 -${ddLatest.toFixed(2)}%</span></div>`;
       }
       return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
     }
@@ -333,7 +333,7 @@
       if (w.mgPeakDate === a.latest.date) {
         badge = `<div><span class="badge badge-high">最大涨幅日</span></div>`;
       } else if (a.latest.close >= w.mgPeakClose - (w.mgPeakClose - w.mgTroughClose) / 3) {
-        badge = `<div><span class="badge badge-high">上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
+        badge = `<div><span class="badge badge-high">目前上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
       }
       return `<b class="up">+${w.mg.toFixed(2)}%</b><div class="small">${fmtDate(w.mgTroughDate)} → ${fmtDate(w.mgPeakDate)}</div>` + badge;
     }
@@ -346,7 +346,7 @@
       if (w.mgPeakDate === a.latest.date) {
         badge = `<div><span class="badge badge-high">最大涨幅日</span></div>`;
       } else if (a.latest.close >= w.mgPeakClose - (w.mgPeakClose - w.mgTroughClose) / 3) {
-        badge = `<div><span class="badge badge-high">上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
+        badge = `<div><span class="badge badge-high">目前上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
       }
       return `<b class="up">+${w.mg.toFixed(2)}%</b><div class="small">${fmtDate(w.mgTroughDate)} → ${fmtDate(w.mgPeakDate)}</div>` + badge;
     }
