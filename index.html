@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260905.1510</title>
+  <title>红利指数每日监控 v20260909.1030</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -223,7 +223,7 @@
     </div>
     <div class="card note"><b>口径说明</b><br>
       ① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 19:00–21:00，GitHub 排队可能推迟；脚本内置交易日判定，周末及法定节假日自动跳过），非实时行情。<br>
-      ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤窗口＝前 N 交易日→最新交易日（含首尾），回撤=(峰值−其后谷值)/峰值 的最大值。<br>
+      ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤/最大涨幅窗口＝前 N 交易日→最新交易日（含首尾）。最大回撤=(峰值−其后谷值)/峰值 的最大值；最大涨幅=(峰值−其前谷值)/谷值 的最大值（即先跌后涨的反弹幅度）。<br>
       ③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
     <div class="card" style="text-align:left"><button
         onclick="window.open('https://github.com/fengerh/DividIndex_Tracker/actions/workflows/update.yml')">手动更新数据</button><span
@@ -244,16 +244,20 @@
         if (i0 < 0) { res.wins[N] = null; continue; }
         const startPt = series[i0], win = series.slice(i0);
         let peak = -Infinity, peakDate = "", pc = "", mdd = 0, pd = "", pc2 = "", td = "", tc = "";
+        let trough = Infinity, troughDate = "", tpc = "", mg = 0, mgTroughDate = "", mgTroughClose = "", mgPeakDate = "", mgPeakClose = "";
         for (const p of win) {
           if (p.close > peak) { peak = p.close; peakDate = p.date; pc = p.close; }
           const dd = (peak - p.close) / peak;
           if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
+          if (p.close < trough) { trough = p.close; troughDate = p.date; tpc = p.close; }
+          const g = (p.close - trough) / trough;
+          if (g > mg) { mg = g; mgTroughDate = troughDate; mgTroughClose = tpc; mgPeakDate = p.date; mgPeakClose = p.close; }
         }
-        res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, peakCloseMax: peak, troughDate: td, troughClose: tc, ongoing: td === latest.date };
+        res.wins[N] = { start: startPt, chg: (latest.close / startPt.close - 1) * 100, mdd: mdd * 100, peakDate: pd, peakClose: pc2, peakCloseMax: peak, troughDate: td, troughClose: tc, ongoing: td === latest.date, mg: mg * 100, mgTroughDate: mgTroughDate, mgTroughClose: mgTroughClose, mgPeakDate: mgPeakDate, mgPeakClose: mgPeakClose, mgOngoing: mgPeakDate === latest.date };
       }
       // 年度计算：按当前自然年为基准
       const thisYear = new Date().getFullYear();
-      const year = { thisYear, prevYearClose: null, prevYearDate: "", prevYearChg: null, mdd: null, peakCloseMax: null };
+      const year = { thisYear, prevYearClose: null, prevYearDate: "", prevYearChg: null, mdd: null, peakCloseMax: null, mg: null };
       // 上一年度最后一个交易日
       for (let i = n - 1; i >= 0; i--) {
         if (+series[i].date.slice(0, 4) === thisYear - 1) {
@@ -270,13 +274,18 @@
       if (yStart >= 0 && yStart < n) {
         const win = series.slice(yStart);
         let peak = -Infinity, peakDate = "", pc = "", mdd = 0, pd = "", pc2 = "", td = "", tc = "";
+        let trough = Infinity, troughDate = "", tpc = "", mg = 0, mgTroughDate = "", mgTroughClose = "", mgPeakDate = "", mgPeakClose = "";
         for (const p of win) {
           if (p.close > peak) { peak = p.close; peakDate = p.date; pc = p.close; }
           const dd = (peak - p.close) / peak;
           if (dd > mdd) { mdd = dd; pd = peakDate; pc2 = pc; td = p.date; tc = p.close; }
+          if (p.close < trough) { trough = p.close; troughDate = p.date; tpc = p.close; }
+          const g = (p.close - trough) / trough;
+          if (g > mg) { mg = g; mgTroughDate = troughDate; mgTroughClose = tpc; mgPeakDate = p.date; mgPeakClose = p.close; }
         }
         year.mdd = { mdd: mdd * 100, peakDate: pd, peakClose: pc2, troughDate: td, troughClose: tc, ongoing: td === latest.date };
         year.peakCloseMax = peak;
+        year.mg = { mg: mg * 100, mgTroughDate: mgTroughDate, mgTroughClose: mgTroughClose, mgPeakDate: mgPeakDate, mgPeakClose: mgPeakClose, ongoing: mgPeakDate === latest.date };
       }
       res.year = year;
       return res;
@@ -315,6 +324,31 @@
       }
       return `<b class="down">-${w.mdd.toFixed(2)}%</b><div class="small">${fmtDate(w.peakDate)} → ${fmtDate(w.troughDate)}</div>` + badge;
     }
+    function mgrCell(a, N) {
+      const w = a.wins[N]; if (!w) return `<span class="small">历史不足</span>`;
+      if (w.mg <= 0) return `0.00%<div class="small">窗口内未上涨</div>`;
+      const mgLatest = (a.latest.close - w.mgTroughClose) / w.mgTroughClose * 100;
+      let badge = "";
+      if (w.mgPeakDate === a.latest.date) {
+        badge = `<div><span class="badge badge-high">最大涨幅日</span></div>`;
+      } else if (a.latest.close >= w.mgPeakClose - (w.mgPeakClose - w.mgTroughClose) / 3) {
+        badge = `<div><span class="badge badge-high">上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
+      }
+      return `<b class="up">+${w.mg.toFixed(2)}%</b><div class="small">${fmtDate(w.mgTroughDate)} → ${fmtDate(w.mgPeakDate)}</div>` + badge;
+    }
+    function yearMgCell(a) {
+      const w = a.year && a.year.mg;
+      if (!w) return `<span class="small">本年无数据</span>`;
+      if (w.mg <= 0) return `0.00%<div class="small">本年未上涨</div>`;
+      const mgLatest = (a.latest.close - w.mgTroughClose) / w.mgTroughClose * 100;
+      let badge = "";
+      if (w.mgPeakDate === a.latest.date) {
+        badge = `<div><span class="badge badge-high">最大涨幅日</span></div>`;
+      } else if (a.latest.close >= w.mgPeakClose - (w.mgPeakClose - w.mgTroughClose) / 3) {
+        badge = `<div><span class="badge badge-high">上涨中 +${mgLatest.toFixed(2)}%</span></div>`;
+      }
+      return `<b class="up">+${w.mg.toFixed(2)}%</b><div class="small">${fmtDate(w.mgTroughDate)} → ${fmtDate(w.mgPeakDate)}</div>` + badge;
+    }
     function newHighCell(a) {
       const tags = [];
       if (a.year && a.year.peakCloseMax != null && a.latest.close >= a.year.peakCloseMax) tags.push("当年新高");
@@ -329,12 +363,15 @@
         { label: "最新收盘", date: a => fmtDate(a.latest.date), cell: a => `<b class="${cls(a.dayChg)}">${fmt(a.latest.close)}</b><div class="${cls(a.dayChg)}">日涨跌 ${pct(a.dayChg)}</div>${newHighCell(a)}`, bg: "var(--bg-latest)", sep: true }];
       const yearRows = [
         { label: "上一年度 收盘", date: a => fmtDate(a.year.prevYearDate), cell: a => yearCloseCell(a), bg: "var(--bg-year)", strong: true },
+        { label: "本年度 最大涨幅", date: null, cell: a => yearMgCell(a), bg: "var(--bg-year)" },
         { label: "本年度 最大回撤", date: null, cell: a => yearMddCell(a), bg: "var(--bg-year)", sep: true }];
       const rows120 = [
         { label: "前120交易日 收盘", date: a => fmtDate(a.wins[120].start.date), cell: a => winCell(a, 120), bg: "var(--bg-120)", strong: true },
+        { label: "近120交易日 最大涨幅", date: null, cell: a => mgrCell(a, 120), bg: "var(--bg-120)" },
         { label: "近120交易日 最大回撤", date: null, cell: a => mddCell(a, 120), bg: "var(--bg-120)", sep: true }];
       const rows250 = [
         { label: "前250交易日 收盘", date: a => fmtDate(a.wins[250].start.date), cell: a => winCell(a, 250), bg: "var(--bg-250)", strong: true },
+        { label: "近250交易日 最大涨幅", date: null, cell: a => mgrCell(a, 250), bg: "var(--bg-250)" },
         { label: "近250交易日 最大回撤", date: null, cell: a => mddCell(a, 250), bg: "var(--bg-250)", sep: true }];
       // 上半年（1-6月）：本年度跨度短于120交易日，年度行在上；下半年（7-12月）：120日行上移。
       // 前250交易日跨度最长（约一年多），始终位于最底部。
