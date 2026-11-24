@@ -9,15 +9,23 @@ INDICES = ["H00922", "H20955"]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
+SHANGHAI_TZ = ZoneInfo("Asia/Shanghai") if ZoneInfo else datetime.timezone(
+    datetime.timedelta(hours=8))
+
+
+def beijing_now():
+    return datetime.datetime.now(datetime.timezone.utc).astimezone(SHANGHAI_TZ)
+
+
 # ============ 交易日判定 ============
 # 需求：只在 A 股交易日抓取数据，避免非交易日白跑和排队推迟导致的重复运行。
 # 非交易日直接退出（exit 0），不写数据、不告警。
 #
 # 注意：本函数【只判定是否为交易日】，不再判断具体盘后小时。
 # 原因：GitHub Actions 定时触发（schedule）经常因 runner 排队而被延迟数小时，
-# 甚至可能跨过午夜到次日 01:00 才执行；若在此做 "hour < 15" 判断，会把这种
+# 甚至可能跨过午夜到次日凌晨才执行；若在此做 "hour < 15" 判断，会把这种
 # 延迟跨日的有效触发误判为"未到收盘"而漏抓。盘后时间统一由 workflow 的
-# cron（北京时间 19:00 / 20:00）保证即可，运行时数据通常已发布。
+# cron（北京时间 18:07 / 20:11 / 22:13）保证即可，运行时数据通常已发布。
 
 # A 股休市日（法定节假日，仅周末之外补休/调休的特殊休市日），按年分组维护。
 # 该表为手工维护，无法覆盖未来全部节假日，需每年按交易所年度休市安排公告补充。
@@ -35,9 +43,20 @@ A_SHARE_HOLIDAYS: dict[int, set[str]] = {
         "2026-06-19",                          # 端午
         "2026-09-25",                          # 中秋
         "2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06",
-        "2026-10-07",           # 国庆
+        "2026-10-07",            # 国庆
     },
-    # 2027: 待交易所发布年度休市安排公告后补充。补充前 2027 工作日默认视为交易日。
+    # 2027 年（国务院办公厅 2026-11-05 发布的放假安排，非周末部分）
+    2027: {
+        "2027-01-01",                          # 元旦
+        "2027-02-05", "2027-02-08", "2027-02-09", "2027-02-10",
+        "2027-02-11", "2027-02-12",            # 春节
+        "2027-04-05",                          # 清明
+        "2027-05-03", "2027-05-04", "2027-05-05",  # 劳动节
+        "2027-06-09",                          # 端午
+        "2027-09-15",                          # 中秋
+        "2027-10-01", "2027-10-04", "2027-10-05",
+        "2027-10-06", "2027-10-07",            # 国庆
+    },
 }
 
 
@@ -47,9 +66,7 @@ def is_trading_day(now):
       1. 周末不交易；
       2. 命中当年休市日表不交易（按 now 所在年份取表）。
     """
-    tz = ZoneInfo("Asia/Shanghai") if ZoneInfo else datetime.timezone(
-        datetime.timedelta(hours=8))
-    local = now.astimezone(tz)
+    local = now.astimezone(SHANGHAI_TZ)
     date_str = f"{local.year:04d}-{local.month:02d}-{local.day:02d}"
     # 周末
     if local.weekday() >= 5:
@@ -63,13 +80,14 @@ def is_trading_day(now):
 # 手动触发（FORCE_UPDATE=1）时强制抓取，跳过交易日判定；
 # 定时触发则只在 A 股交易日运行，避免非交易日白跑。
 FORCE_UPDATE = os.environ.get("FORCE_UPDATE") == "1"
+print("当前北京时间:", beijing_now().strftime("%Y-%m-%d %H:%M:%S"))
 if not FORCE_UPDATE and not is_trading_day(datetime.datetime.now(datetime.timezone.utc)):
     print("非 A 股交易日（周末或当年休市日），跳过本次更新。")
     sys.exit(0)
 # ============ 交易日判定结束 ============
 
 def fetch(code):
-    end = datetime.date.today()
+    end = beijing_now().date()
     start = end - datetime.timedelta(days=700)
     url = (f"https://www.csindex.com.cn/csindex-home/perf/index-perf"
            f"?indexCode={code}&startDate={start:%Y%m%d}&endDate={end:%Y%m%d}")
@@ -97,7 +115,9 @@ data = {"updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "indices": {}}
 for c in INDICES:
     data["indices"][c] = fetch(c)
-    print(c, len(data["indices"][c]), "个交易日")
+    series = data["indices"][c]
+    last_date = series[-1]["date"] if series else "无数据"
+    print(c, len(series), "个交易日，接口最新:", last_date)
 
 # ============ 幂等检查 ============
 # 多次定时触发时，若接口最新交易日并未比本地 data.json 已有数据更新，
