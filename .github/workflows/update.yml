@@ -2,11 +2,15 @@ name: 每日更新指数数据
 
 on:
   schedule:
-    - cron: "0 16 * * 1-5"    # 北京时间 16:00 主跑（IANA 时区 Asia/Shanghai）
-      timezone: "Asia/Shanghai"
-    - cron: "0 17 * * 1-5"    # 北京时间 17:00 兜底
-      timezone: "Asia/Shanghai"
+    # GitHub Actions 的 cron 使用 UTC；已换算为北京时间，并刻意避开整点以降低排队延迟。
+    - cron: "7 10 * * 1-5"    # 北京时间 18:07 主跑
+    - cron: "11 12 * * 1-5"   # 北京时间 20:11 兜底
+    - cron: "13 14 * * 1-5"   # 北京时间 22:13 兜底
   workflow_dispatch:          # 允许手动触发
+
+concurrency:
+  group: dividindex-data-update
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -20,6 +24,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - name: 记录触发时间
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "触发事件: $EVENT_NAME"
+          echo "UTC 时间: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "北京时间: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')"
       - name: 抓取中证指数数据
         env:
           FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
