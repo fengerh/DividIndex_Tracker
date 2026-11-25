@@ -2,11 +2,18 @@ name: 每日更新指数数据
 
 on:
   schedule:
-    # GitHub Actions 的 cron 使用 UTC；已换算为北京时间，并刻意避开整点以降低排队延迟。
-    - cron: "7 10 * * 1-5"    # 北京时间 18:07 主跑
-    - cron: "11 12 * * 1-5"   # 北京时间 20:11 兜底
-    - cron: "13 14 * * 1-5"   # 北京时间 22:13 兜底
-  workflow_dispatch:          # 允许手动触发
+    # cron 恒为 UTC（+8 为北京时间）。主触发在外部定时器 cron-job.org（北京 18:05 / 20:10 / 22:15），
+    # 这里的 cron 只作兜底：外部服务整体失效时仍能当日更新。
+    # 时点与外部触发错开 8~13 分钟，避免同时进入 concurrency 队列。
+    - cron: "23 12 * * 1-5"   # 北京时间 20:23 兜底
+    - cron: "27 14 * * 1-5"   # 北京时间 22:27 兜底
+  workflow_dispatch:          # 网页手动触发 / 外部定时器 API 触发
+    inputs:
+      force:
+        description: "1=强制重抓（跳过交易日与幂等检查，校验下限 50 条）；0=按定时逻辑（幂等 + 400 条校验）"
+        type: choice
+        options: ["1", "0"]
+        default: "1"
 
 concurrency:
   group: dividindex-data-update
@@ -27,13 +34,21 @@ jobs:
       - name: 记录触发时间
         env:
           EVENT_NAME: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+          FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force != '0' && '1' || '0' }}
         run: |
           echo "触发事件: $EVENT_NAME"
+          echo "触发者: $ACTOR"
+          echo "force 输入: ${INPUT_FORCE:-（未提供）}"
+          echo "FORCE_UPDATE: $FORCE_UPDATE"
           echo "UTC 时间: $(date -u '+%Y-%m-%d %H:%M:%S')"
           echo "北京时间: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')"
       - name: 抓取中证指数数据
         env:
-          FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          # 三态：外部定时器传 force=0 → 0（幂等+严格校验）；网页按钮默认 force=1 → 1（强制重抓）；
+          # schedule 无 inputs → 0。见 README「触发模式对照表」。
+          FORCE_UPDATE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force != '0' && '1' || '0' }}
         run: python fetch_data.py
       - name: 提交并推送
         run: |
