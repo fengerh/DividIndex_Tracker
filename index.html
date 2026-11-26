@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>红利指数每日监控 v20260909.1100</title>
+  <title>红利指数每日监控 v20261126.1700</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -223,7 +223,7 @@
       </table>
     </div>
     <div class="card note"><b>口径说明</b><br>
-      ① 数据由 GitHub Actions 每个交易日收盘后自动抓取（北京时间约 19:00–21:00，GitHub 排队可能推迟；脚本内置交易日判定，周末及法定节假日自动跳过），非实时行情。<br>
+      ① 数据由 GitHub Actions 在每个交易日 18:07 / 20:11 / 22:13（北京时间）分三档自动抓取；若接口当日数据尚未发布，后续档位会自动重试，抓到新交易日才写入，页面通常在当晚更新。GitHub 排队可能造成几十分钟延迟，非实时行情。脚本内置交易日判定，周末及法定节假日自动跳过（休市表已覆盖至 2027 年）。<br>
       ② “前 N 交易日”＝从最新交易日倒数 N 个交易日；最大回撤/最大涨幅窗口＝前 N 交易日→最新交易日（含首尾）。最大回撤=(峰值−其后谷值)/峰值 的最大值；最大涨幅=(峰值−其前谷值)/谷值 的最大值（即先跌后涨的反弹幅度）。<br>
       ③ 全收益指数已含分红再投资收益。数据源：中证指数官网。</div>
     <div class="card" style="text-align:left"><button
